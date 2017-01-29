@@ -26,6 +26,13 @@ apply plugin: 'idea'
 apply from: 'gradle/credentials.gradle'
 apply from: 'gradle/compile.gradle'
 apply from: 'gradle/publishing.gradle'
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
 
 dependencies {
     compile localGroovy()

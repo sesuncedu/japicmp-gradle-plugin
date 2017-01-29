@@ -15,6 +15,8 @@
  */
 package me.champeau.gradle
 
+import org.gradle.api.Task
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.Input
 
 class ArtifactJapicmpTask extends JapicmpAbstractTask {
@@ -30,7 +32,20 @@ class ArtifactJapicmpTask extends JapicmpAbstractTask {
     @Override
     File getOldArchive() {
         if (!oldArchive) {
-            oldArchive = computeDependency(baseline)
+            def dep = project.dependencies.create(baseline, { it.force = true })
+            def configuration = project.configurations.detachedConfiguration(dep)
+            def res = configuration.resolvedConfiguration.resolvedArtifacts
+            ResolvedArtifact resolvedArtifact = res.find {
+                ResolvedArtifact it ->
+                    def id = it.moduleVersion.id
+                    !it.classifier  && id.group  == dep.group && id.name == dep.name && id.version == dep.version }
+            //println "resolvedArt = ${resolvedArtifact.properties}"
+            oldArchive = resolvedArtifact.file
+            oldClasspath = res.findAll  {
+                ResolvedArtifact it ->
+                    def id = it.moduleVersion.id
+                    !(!it.classifier  && id.group  == dep.group && id.name == dep.name && id.version == dep.version) }*.file
+            //println "old class path = ${oldClasspath}}"
         }
         oldArchive
     }
@@ -41,6 +56,11 @@ class ArtifactJapicmpTask extends JapicmpAbstractTask {
             newArchive = computeDependency(to)
         }
         newArchive
+    }
+
+    @Override
+    Task configure(Closure closure) {
+        return super.configure(closure)
     }
 
     private File computeDependency(Object module) {
